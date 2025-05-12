@@ -3,7 +3,7 @@ local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/blood
 local window = library:new({
 	textsize = 13.5,
 	font = Enum.Font.RobotoMono,
-	name = "PAINEL MECSAULTIANO - By Sillage",
+	name = "Xenz Hub - By Xenz Cheats",
 	color = Color3.fromRGB(225,58,81)
 })
 
@@ -16,6 +16,7 @@ local showBox = false
 local showName = false
 local showDistance = false
 local showHP = false
+local showSkeleton = false
 
 local ESP_FOLDER = {}
 local Players = game:GetService("Players")
@@ -23,52 +24,17 @@ local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
--- Toggle principal (liga/desliga tudo)
-section1:toggle({
-	name = "ESP Geral",
-	def = false,
-	callback = function(value)
-		tog = value
-	end
-})
+-- Toggles
+section1:toggle({name = "Show Esp", def = false, callback = function(v) tog = v end})
+section1:toggle({name = "Show Box", def = false, callback = function(v) showBox = v end})
+section1:toggle({name = "Show Nick", def = false, callback = function(v) showName = v end})
+section1:toggle({name = "Show Distance", def = false, callback = function(v) showDistance = v end})
+section1:toggle({name = "Show HP", def = false, callback = function(v) showHP = v end})
+section1:toggle({name = "Show Skeleton", def = false, callback = function(v) showSkeleton = v end})
 
--- Toggles individuais
-section1:toggle({
-	name = "Mostrar Caixa",
-	def = false,
-	callback = function(value)
-		showBox = value
-	end
-})
-
-section1:toggle({
-	name = "Mostrar Nick",
-	def = false,
-	callback = function(value)
-		showName = value
-	end
-})
-
-section1:toggle({
-	name = "Mostrar Distância",
-	def = false,
-	callback = function(value)
-		showDistance = value
-	end
-})
-
-section1:toggle({
-	name = "Mostrar Vida",
-	def = false,
-	callback = function(value)
-		showHP = value
-	end
-})
-
--- Criar ESP para um jogador
+-- Criar ESP
 local function createESP(player)
-	if player == LocalPlayer then return end
-	if ESP_FOLDER[player] then return end
+	if player == LocalPlayer or ESP_FOLDER[player] then return end
 
 	local box = Drawing.new("Square")
 	box.Thickness = 1
@@ -97,11 +63,38 @@ local function createESP(player)
 	hpText.Outline = true
 	hpText.Visible = false
 
+	local skeleton = {}
+	local bones = {
+		{"Head", "UpperTorso"},
+		{"UpperTorso", "LowerTorso"},
+		{"UpperTorso", "LeftUpperArm"},
+		{"UpperTorso", "RightUpperArm"},
+		{"LeftUpperArm", "LeftLowerArm"},
+		{"RightUpperArm", "RightLowerArm"},
+		{"LeftLowerArm", "LeftHand"},
+		{"RightLowerArm", "RightHand"},
+		{"LowerTorso", "LeftUpperLeg"},
+		{"LowerTorso", "RightUpperLeg"},
+		{"LeftUpperLeg", "LeftLowerLeg"},
+		{"RightUpperLeg", "RightLowerLeg"},
+		{"LeftLowerLeg", "LeftFoot"},
+		{"RightLowerLeg", "RightFoot"},
+	}
+
+	for _, bone in ipairs(bones) do
+		local line = Drawing.new("Line")
+		line.Color = Color3.new(1, 0, 0)
+		line.Thickness = 1
+		line.Visible = false
+		table.insert(skeleton, {from = bone[1], to = bone[2], line = line})
+	end
+
 	ESP_FOLDER[player] = {
 		box = box,
 		name = nameText,
 		dist = distanceText,
-		hp = hpText
+		hp = hpText,
+		skeleton = skeleton
 	}
 
 	RunService.RenderStepped:Connect(function()
@@ -129,16 +122,33 @@ local function createESP(player)
 			hpText.Position = Vector2.new(pos.X, pos.Y + boxSize.Y / 2 + 18)
 			hpText.Text = "HP: " .. math.floor(humanoid.Health)
 			hpText.Visible = tog and showHP and onScreen
+
+			for _, bone in ipairs(skeleton) do
+				local partFrom = player.Character:FindFirstChild(bone.from)
+				local partTo = player.Character:FindFirstChild(bone.to)
+				if partFrom and partTo then
+					local pos1, vis1 = Camera:WorldToViewportPoint(partFrom.Position)
+					local pos2, vis2 = Camera:WorldToViewportPoint(partTo.Position)
+					bone.line.From = Vector2.new(pos1.X, pos1.Y)
+					bone.line.To = Vector2.new(pos2.X, pos2.Y)
+					bone.line.Visible = tog and showSkeleton and vis1 and vis2
+				else
+					bone.line.Visible = false
+				end
+			end
 		else
 			box.Visible = false
 			nameText.Visible = false
 			distanceText.Visible = false
 			hpText.Visible = false
+			for _, bone in ipairs(skeleton) do
+				bone.line.Visible = false
+			end
 		end
 	end)
 end
 
--- Monitorar novos jogadores
+-- Monitorar jogadores
 Players.PlayerAdded:Connect(function(player)
 	player.CharacterAdded:Connect(function()
 		wait(1)
@@ -146,15 +156,16 @@ Players.PlayerAdded:Connect(function(player)
 	end)
 end)
 
--- Adicionar ESP a jogadores já conectados
 for _, player in pairs(Players:GetPlayers()) do
 	if player ~= LocalPlayer then
 		createESP(player)
 	end
 end
 
-local tab = window:page({name = "AIMBOT"})
-local section1 = tab:section({name = "AIMBOT", side = "left", size = 250})
+-- O
+
+local tab = window:page({name = "COMBAT"})
+local section1 = tab:section({name = "AIMBOT", side = "left", size = 245})
 
 local AIMBOT_ENABLED = false
 local SMOOTHNESS = 0.1 -- Padrão para suavidade
@@ -175,7 +186,6 @@ section1:toggle({
 	def = false,
 	callback = function(value)
 		AIMBOT_ENABLED = value
-		warn("Aimbot: " .. (AIMBOT_ENABLED and "ATIVADO ✅" or "DESATIVADO ❌"))
 	end
 })
 
@@ -187,18 +197,16 @@ section1:slider({
 	def = 0.1,
 	callback = function(value)
 		SMOOTHNESS = value
-		warn("Suavidade: " .. value)
 	end
 })
 
 -- Toggle para ativar/desativar FOV
 section1:toggle({
 	name = "Mostrar FOV",
-	def = true,
+	def = false,
 	callback = function(value)
 		FOV_ENABLED = value
 		fovCircle.Visible = FOV_ENABLED  -- Atualiza a visibilidade do círculo FOV
-		warn("FOV: " .. (FOV_ENABLED and "ATIVADO ✅" or "DESATIVADO ❌"))
 	end
 })
 
@@ -211,8 +219,16 @@ section1:slider({
 	callback = function(value)
 		FOV_RADIUS = value
 		fovCircle.Radius = FOV_RADIUS  -- Atualiza o raio do círculo FOV
-		warn("Raio do FOV: " .. value)
 	end
+})
+
+-- Adiciona a funcionalidade de seletor de cor para o FOV
+section1:colorpicker({
+    name = "Cor do FOV",
+    def = Color3.fromRGB(255, 0, 0),  -- Cor vermelha padrão
+    callback = function(value)
+        fovCircle.Color = value  -- Atualiza a cor do círculo FOV com a cor selecionada
+    end
 })
 
 -- Toggle para ativar/desativar TeamCheck
@@ -221,7 +237,6 @@ section1:toggle({
 	def = false,
 	callback = function(value)
 		TEAM_CHECK = value
-		warn("TeamCheck: " .. (TEAM_CHECK and "ATIVADO ✅" or "DESATIVADO ❌"))
 	end
 })
 
@@ -231,7 +246,6 @@ section1:toggle({
 	def = true,
 	callback = function(value)
 		WALL_CHECK = value
-		warn("WallCheck: " .. (WALL_CHECK and "ATIVADO ✅" or "DESATIVADO ❌"))
 	end
 })
 
@@ -242,7 +256,6 @@ section1:dropdown({
 	def = "Head",
 	callback = function(value)
 		AIM_PART = value
-		warn("Mirando no: " .. value)
 	end
 })
 
